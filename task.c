@@ -16,6 +16,7 @@
 
 void task0_code();
 void task1_code();
+void task2_code();
 
 void ap_task_code();
 
@@ -36,6 +37,7 @@ void task_init()
 	/* Inizializzazione di P_TASKS[] */
 	P_TASKS[0] = task0_code;
 	P_TASKS[1] = task1_code;
+    P_TASKS[2] = task2_code;
 	/* ... */
 
 	/* Inizializzazione di AP_TASK */
@@ -45,38 +47,32 @@ void task_init()
 	/* Inizializzazione di SCHEDULE e SLACK (se necessario) */
 
 	/* frame 0 */
-	SCHEDULE[0] = (int *) malloc( sizeof( int ) * 1 );
-	SCHEDULE[0][0] = -1;
+	SCHEDULE[0] = (int *) malloc( sizeof( int ) * 4 );
+	SCHEDULE[0][0] = 0;
+    SCHEDULE[0][1] = 1;
+    SCHEDULE[0][2] = 2;
+    SCHEDULE[0][3] = -1;
 
-	SLACK[0] = 4; /* tutto il frame */
+	SLACK[0] = 1; /* tutto il frame */
 
 
 	/* frame 1 */
-	SCHEDULE[1] = (int *) malloc( sizeof( int ) * 1 );
-	SCHEDULE[1][0] = -1;
+	SCHEDULE[1] = (int *) malloc( sizeof( int ) * 3 );
+	SCHEDULE[1][0] = 0;
+    SCHEDULE[1][1] = 1;
+	SCHEDULE[1][2] = -1;
 
-	SLACK[1] = 4; /* tutto il frame */
+	SLACK[1] = 5; /* tutto il frame */
 
 
 	/* frame 2 */
-	SCHEDULE[2] = (int *) malloc( sizeof( int ) * 1 );
-	SCHEDULE[2][0] = -1;
+	SCHEDULE[2] = (int *) malloc( sizeof( int ) * 4 );
+	SCHEDULE[2][0] = 0;
+    SCHEDULE[2][1] = 1;
+    SCHEDULE[2][2] = 2;
+	SCHEDULE[2][3] = -1;
 
-	SLACK[2] = 4; /* tutto il frame */
-
-
-	/* frame 3 */
-	SCHEDULE[3] = (int *) malloc( sizeof( int ) * 1 );
-	SCHEDULE[3][0] = -1;
-
-	SLACK[3] = 4; /* tutto il frame */
-
-
-	/* frame 4 */
-	SCHEDULE[4] = (int *) malloc( sizeof( int ) * 1 );
-	SCHEDULE[4][0] = -1;
-
-	SLACK[4] = 4; /* tutto il frame */
+	SLACK[2] = 1; /* tutto il frame */
 
 	/* Custom Code */
 }
