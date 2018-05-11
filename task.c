@@ -97,12 +97,29 @@ void task_destroy()
 
 void task0_code()
 {
-	/* Custom Code */
+    struct timespec t;
+    t.tv_sec = 0;
+    t.tv_nsec = 2000000;
+    nanosleep(&t, NULL);
+    return;
 }
 
 void task1_code()
 {
-	/* Custom Code */
+    struct timespec t;
+    t.tv_sec = 0;
+    t.tv_nsec = 3000000;
+    nanosleep(&t, NULL);
+    return;
+}
+
+void task2_code()
+{
+    struct timespec t;
+    t.tv_sec = 0;
+    t.tv_nsec = 4000000;
+    nanosleep(&t, NULL);
+    return;
 }
 
 
