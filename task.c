@@ -6,13 +6,13 @@
 #include "busy_wait.h"
 
 /* Lunghezza dell'iperperiodo */
-#define H_PERIOD_ 20
+#define H_PERIOD_ 30
 
 /* Numero di frame */
-#define NUM_FRAMES_ 5
+#define NUM_FRAMES_ 3
 
 /* Numero di task */
-#define NUM_P_TASKS_ 2
+#define NUM_P_TASKS_ 3
 
 void task0_code();
 void task1_code();
