@@ -1,19 +1,16 @@
 CC = gcc
 CFLAGS = -O3 -Wall $(PRINT)
-LFLAGS =
+LFLAGS = -lpthread
 
-all : executive
+all : busy_wait
 
-busy_wait: busy_wait.o
-	$(CC) -o busy_wait busy_wait.o $(LFLAGS) -lpthread
-
-executive: executive.o busy_wait.o task.o
-	$(CC) -o executive executive.o busy_wait.o task.o $(LFLAGS) -lpthread
+busy_wait: busy_wait.o executive.o task.o
+	$(CC) -o busy_wait busy_wait.o executive.o task.o $(LFLAGS)
 
 %.o: %.c 
 	$(CC) $(CFLAGS) -DSIZE=$(SIZE) -c -o $@ $<
 
 clean :
-	rm -f *.o *~ executive busy_wait
+	rm -f *.o *~ busy_wait
 
 

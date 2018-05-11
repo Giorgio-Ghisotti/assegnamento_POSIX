@@ -49,6 +49,10 @@ void busy_wait(unsigned int millisec)
 	busy_wait_impl(100000, millisec * millisec_cycles);
 }
 
+int main(){
+    return 0;
+}
+
 #if 0
 int main()  // test
 {
