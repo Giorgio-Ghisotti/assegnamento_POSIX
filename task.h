@@ -36,6 +36,10 @@ void task_destroy();
 /* Richiede il rilascio del task aperiodico */
 void ap_task_request();
 
+void task0_code();
+void task1_code();
+void task2_code();
+
 
 /* Nota sulla lista SCHEDULE:
 
