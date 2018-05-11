@@ -17,6 +17,7 @@ struct task{
     pthread_mutex_t * mutex;
     pthread_cond_t * cond;
     int state;
+    int priority;
 };
 
 void ap_task_request()
@@ -75,6 +76,7 @@ void executive()
         tasks[i].mutex = &mutex;
         tasks[i].cond = &cond;
         pthread_create(&tasks[i].thread, NULL, p_task_handler, &tasks[i]);
+        tasks[i].priority = 98 - i; //99 is the executive
     }
 
 /*	while(1)
