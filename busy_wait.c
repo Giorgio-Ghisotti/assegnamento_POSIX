@@ -20,9 +20,9 @@ static unsigned int busy_wait_impl(unsigned int max_millisec, unsigned int max_c
 		gettimeofday(&actual, NULL);
 		++cycles;
 	}
-	while ( (cycles < max_cycles) && 
+	while ( (cycles < max_cycles) &&
 		(actual.tv_sec < final.tv_sec || (actual.tv_sec == final.tv_sec && actual.tv_usec < final.tv_usec)) );
-		
+
 	return cycles;
 }
 
@@ -34,12 +34,12 @@ void busy_wait_init()
 {
 	unsigned int sum = 0;
 	unsigned int i;
-	
+
 	for (i=0; i < 10; ++i)
 	{
 		sum += busy_wait_impl(100, 0xFFFFFFFF);
 	}
-	
+
 	millisec_cycles = sum / 10 / 100;
 }
 
@@ -49,22 +49,18 @@ void busy_wait(unsigned int millisec)
 	busy_wait_impl(100000, millisec * millisec_cycles);
 }
 
-int main(){
-    return 0;
-}
-
 #if 0
 int main()  // test
 {
 	unsigned int i;
-	
+
 	struct sched_param max_parm;
 
 	max_parm.sched_priority = sched_get_priority_max( SCHED_FIFO );
 	pthread_setschedparam( pthread_self(), SCHED_FIFO, &max_parm );
-	
+
 	busy_wait_init();
-	
+
 	for (i=0; i<20; ++i)
 	{
 		struct timeval before;
@@ -73,11 +69,9 @@ int main()  // test
 		gettimeofday(&before, NULL);
 		busy_wait(1000);
 		gettimeofday(&after, NULL);
-		
+
 		printf("%u\n", (unsigned)((after.tv_sec - before.tv_sec) * 1000000 + after.tv_usec - before.tv_usec)/1000);
 	}
 	return 0;
 }
 #endif
-
-
