@@ -94,32 +94,26 @@ void task_destroy()
 
 void task0_code()
 {
+	busy_wait_init();
+	busy_wait(2000);
 	printf("0\n");
-    // struct timespec t;
-    // t.tv_sec = 0;
-    // t.tv_nsec = 2000000;
-    // nanosleep(&t, NULL);
-    return;
+  return;
 }
 
 void task1_code()
 {
+	busy_wait_init();
+	busy_wait(3000);
 	printf("1\n");
-    // struct timespec t;
-    // t.tv_sec = 0;
-    // t.tv_nsec = 3000000;
-    // nanosleep(&t, NULL);
-    return;
+  return;
 }
 
 void task2_code()
 {
+	busy_wait_init();
+	busy_wait(4000);
 	printf("2\n");
-    // struct timespec t;
-    // t.tv_sec = 0;
-    // t.tv_nsec = 4000000;
-    // nanosleep(&t, NULL);
-    return;
+  return;
 }
 
 
