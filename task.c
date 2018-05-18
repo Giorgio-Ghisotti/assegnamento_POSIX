@@ -50,9 +50,9 @@ void task_init()
 	/* frame 0 */
 	SCHEDULE[0] = (int *) malloc( sizeof( int ) * 4 );
 	SCHEDULE[0][0] = 0;
-    SCHEDULE[0][1] = 1;
-    SCHEDULE[0][2] = 2;
-    SCHEDULE[0][3] = -1;
+  SCHEDULE[0][1] = 1;
+  SCHEDULE[0][2] = 2;
+  SCHEDULE[0][3] = -1;
 
 	SLACK[0] = 1; /* tutto il frame */
 
@@ -60,7 +60,7 @@ void task_init()
 	/* frame 1 */
 	SCHEDULE[1] = (int *) malloc( sizeof( int ) * 3 );
 	SCHEDULE[1][0] = 0;
-    SCHEDULE[1][1] = 1;
+  SCHEDULE[1][1] = 1;
 	SCHEDULE[1][2] = -1;
 
 	SLACK[1] = 5; /* tutto il frame */
@@ -69,8 +69,8 @@ void task_init()
 	/* frame 2 */
 	SCHEDULE[2] = (int *) malloc( sizeof( int ) * 4 );
 	SCHEDULE[2][0] = 0;
-    SCHEDULE[2][1] = 1;
-    SCHEDULE[2][2] = 2;
+  SCHEDULE[2][1] = 1;
+  SCHEDULE[2][2] = 2;
 	SCHEDULE[2][3] = -1;
 
 	SLACK[2] = 1; /* tutto il frame */
