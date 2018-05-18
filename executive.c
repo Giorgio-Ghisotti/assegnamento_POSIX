@@ -11,6 +11,9 @@
 #define PENDING 0
 #define RUNNING 1
 #define IDLE 2
+#ifdef MULTIPROC
+	cpu_set_t cpuset;
+#endif
 
 struct task{
 	pthread_t thread;
@@ -30,7 +33,6 @@ void * p_task_handler(void * a) //periodic task handler
 {
 	struct task * t = (struct task *) a;
 	for(int i = 0; i<t->cycles*NUM_FRAMES; i++){
-		printf("i:%d\n", i);
 		pthread_cond_wait(&t->cond, &t->mutex);
 		t->state = RUNNING;
 		P_TASKS[t->id]();
@@ -58,6 +60,15 @@ void * executive(void * v)
 	struct task tasks[NUM_P_TASKS];
 
 	for(int i = 0; i<NUM_P_TASKS; i++){
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+#ifdef MULTIPROC
+		cpu_set_t cpuset;
+  	CPU_ZERO(&cpuset);
+  	CPU_SET(0, &cpuset);
+  	pthread_attr_setaffinity_np( &attr, sizeof(cpu_set_t), &cpuset );
+#endif
 		tasks[i].id = i;
 		tasks[i].state = PENDING;
 		tasks[i].cycles = 0;
@@ -73,6 +84,8 @@ void * executive(void * v)
 		pthread_create(&tasks[i].thread, NULL, p_task_handler, &tasks[i]);
 	}
 
+	pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
+	pthread_cond_t co = PTHREAD_COND_INITIALIZER;
 	for(int i = 0; i<4*NUM_FRAMES; i++){	//main loop
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
 		for(int a = 0; a < sizeof(schedule); a++){
@@ -82,14 +95,13 @@ void * executive(void * v)
 			pthread_setschedparam(tasks[schedule[a]].thread, SCHED_FIFO, &param);
 			pthread_cond_signal(&tasks[schedule[a]].cond);
 		}
-		busy_wait_init();
 
+		int nanosec = H_PERIOD*10000000000000000/NUM_FRAMES;
+		time.tv_sec += ( time.tv_nsec + nanosec ) / 1000000000;
+		time.tv_nsec = ( time.tv_nsec + nanosec ) % 1000000000;
 		printf("waiting...\n");
-		busy_wait(H_PERIOD/NUM_FRAMES);
+		pthread_cond_timedwait(&co, &mu, &time );
 		printf("waited\n");
-		// time.tv_sec += ( time.tv_nsec + nanosec ) / 1000000000;
-		// time.tv_nsec = ( time.tv_nsec + nanosec ) % 1000000000;
-		//pthread_cond_timedwait( ..., &time );
 	}
 
 	for(int i = 0; i<NUM_P_TASKS;i++) pthread_join(tasks[i].thread, NULL);
@@ -101,9 +113,6 @@ void * executive(void * v)
 }
 
 int main(){
-#ifdef MULTIPROC
-	cpu_set_t cpuset;
-#endif
 
 	task_init();
 	pthread_attr_t attr;

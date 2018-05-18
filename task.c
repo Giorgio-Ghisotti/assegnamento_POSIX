@@ -1,5 +1,5 @@
 #include "task.h"
-
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
@@ -50,9 +50,9 @@ void task_init()
 	/* frame 0 */
 	SCHEDULE[0] = (int *) malloc( sizeof( int ) * 4 );
 	SCHEDULE[0][0] = 0;
-  SCHEDULE[0][1] = 1;
-  SCHEDULE[0][2] = 2;
-  SCHEDULE[0][3] = -1;
+    SCHEDULE[0][1] = 1;
+    SCHEDULE[0][2] = 2;
+    SCHEDULE[0][3] = -1;
 
 	SLACK[0] = 1; /* tutto il frame */
 
@@ -60,7 +60,7 @@ void task_init()
 	/* frame 1 */
 	SCHEDULE[1] = (int *) malloc( sizeof( int ) * 3 );
 	SCHEDULE[1][0] = 0;
-  SCHEDULE[1][1] = 1;
+    SCHEDULE[1][1] = 1;
 	SCHEDULE[1][2] = -1;
 
 	SLACK[1] = 5; /* tutto il frame */
@@ -69,8 +69,8 @@ void task_init()
 	/* frame 2 */
 	SCHEDULE[2] = (int *) malloc( sizeof( int ) * 4 );
 	SCHEDULE[2][0] = 0;
-  SCHEDULE[2][1] = 1;
-  SCHEDULE[2][2] = 2;
+    SCHEDULE[2][1] = 1;
+    SCHEDULE[2][2] = 2;
 	SCHEDULE[2][3] = -1;
 
 	SLACK[2] = 1; /* tutto il frame */
@@ -94,28 +94,31 @@ void task_destroy()
 
 void task0_code()
 {
-    struct timespec t;
-    t.tv_sec = 0;
-    t.tv_nsec = 2000000;
-    nanosleep(&t, NULL);
+	printf("0\n");
+    // struct timespec t;
+    // t.tv_sec = 0;
+    // t.tv_nsec = 2000000;
+    // nanosleep(&t, NULL);
     return;
 }
 
 void task1_code()
 {
-    struct timespec t;
-    t.tv_sec = 0;
-    t.tv_nsec = 3000000;
-    nanosleep(&t, NULL);
+	printf("1\n");
+    // struct timespec t;
+    // t.tv_sec = 0;
+    // t.tv_nsec = 3000000;
+    // nanosleep(&t, NULL);
     return;
 }
 
 void task2_code()
 {
-    struct timespec t;
-    t.tv_sec = 0;
-    t.tv_nsec = 4000000;
-    nanosleep(&t, NULL);
+	printf("2\n");
+    // struct timespec t;
+    // t.tv_sec = 0;
+    // t.tv_nsec = 4000000;
+    // nanosleep(&t, NULL);
     return;
 }
 
