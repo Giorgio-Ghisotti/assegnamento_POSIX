@@ -76,6 +76,7 @@ void task_init()
 	SLACK[2] = 1; /* tutto il frame */
 
 	/* Custom Code */
+	busy_wait_init();
 }
 
 void task_destroy()
@@ -94,25 +95,22 @@ void task_destroy()
 
 void task0_code()
 {
-	busy_wait_init();
-	busy_wait(2000);
 	printf("0\n");
+  busy_wait(20);
   return;
 }
 
 void task1_code()
 {
-	busy_wait_init();
-	busy_wait(3000);
 	printf("1\n");
-  return;
+	busy_wait(30);
+	return;
 }
 
 void task2_code()
 {
-	busy_wait_init();
-	busy_wait(4000);
 	printf("2\n");
+	busy_wait(40);
   return;
 }
 

@@ -52,17 +52,18 @@ void * executive(void * v)
 	struct timespec time;
 	struct timeval utime;
 
-	gettimeofday(&utime,NULL);
-
-	time.tv_sec = utime.tv_sec;
-	time.tv_nsec = utime.tv_usec * 1000;
+	pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
+	pthread_cond_t co = PTHREAD_COND_INITIALIZER;
 
 	struct task tasks[NUM_P_TASKS];
 
 	for(int i = 0; i<NUM_P_TASKS; i++){
+		struct sched_param param;
+		param.sched_priority = 98 - i;
 		pthread_attr_t attr;
 		pthread_attr_init(&attr);
 		pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+		pthread_attr_setschedparam(&attr, &param);
 #ifdef MULTIPROC
 		cpu_set_t cpuset;
   	CPU_ZERO(&cpuset);
@@ -81,27 +82,37 @@ void * executive(void * v)
 		}
 		pthread_mutex_init(&tasks[i].mutex, NULL);
 		pthread_cond_init(&tasks[i].cond, NULL);
-		pthread_create(&tasks[i].thread, NULL, p_task_handler, &tasks[i]);
+		pthread_create(&tasks[i].thread, &attr, p_task_handler, &tasks[i]);
 	}
 
-	pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t co = PTHREAD_COND_INITIALIZER;
+	sleep(4);
+
 	for(int i = 0; i<4*NUM_FRAMES; i++){	//main loop
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
 		for(int a = 0; a < sizeof(schedule); a++){
 			if(schedule[a] == -1) break;
 			struct sched_param param;
 			param.sched_priority = 98 - a;
+			pthread_mutex_lock(&tasks[schedule[a]].mutex);
+			tasks[schedule[a]].state = PENDING;
 			pthread_setschedparam(tasks[schedule[a]].thread, SCHED_FIFO, &param);
 			pthread_cond_signal(&tasks[schedule[a]].cond);
+			pthread_mutex_unlock(&tasks[schedule[a]].mutex);
 		}
 
-		int nanosec = H_PERIOD*10000000000000000/NUM_FRAMES;
+		int nanosec = H_PERIOD*10/NUM_FRAMES;
+		// printf("waiting... utime.tv_usec: %ld\n", utime.tv_usec);
+		gettimeofday(&utime,NULL);
+
+		time.tv_sec = utime.tv_sec;
+		time.tv_nsec = utime.tv_usec * 1000;
 		time.tv_sec += ( time.tv_nsec + nanosec ) / 1000000000;
 		time.tv_nsec = ( time.tv_nsec + nanosec ) % 1000000000;
-		printf("waiting...\n");
+		pthread_mutex_lock(&mu);
 		pthread_cond_timedwait(&co, &mu, &time );
-		printf("waited\n");
+		pthread_mutex_unlock(&mu);
+		printf("#########\n");
+		// printf("waited %ld ns; utime.tv_sec: %ld\n",time.tv_nsec - utime.tv_usec*1000, utime.tv_sec);
 	}
 
 	for(int i = 0; i<NUM_P_TASKS;i++) pthread_join(tasks[i].thread, NULL);
