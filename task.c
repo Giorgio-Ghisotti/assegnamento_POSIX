@@ -76,6 +76,7 @@ void task_init()
 	SLACK[2] = 1; /* tutto il frame */
 
 	/* Custom Code */
+	busy_wait_init();
 }
 
 void task_destroy()
@@ -95,31 +96,22 @@ void task_destroy()
 void task0_code()
 {
 	printf("0\n");
-    // struct timespec t;
-    // t.tv_sec = 0;
-    // t.tv_nsec = 2000000;
-    // nanosleep(&t, NULL);
-    return;
+  busy_wait(2000000);
+  return;
 }
 
 void task1_code()
 {
 	printf("1\n");
-    // struct timespec t;
-    // t.tv_sec = 0;
-    // t.tv_nsec = 3000000;
-    // nanosleep(&t, NULL);
-    return;
+	busy_wait(3000000);
+	return;
 }
 
 void task2_code()
 {
 	printf("2\n");
-    // struct timespec t;
-    // t.tv_sec = 0;
-    // t.tv_nsec = 4000000;
-    // nanosleep(&t, NULL);
-    return;
+	busy_wait(4000000);
+  return;
 }
 
 
