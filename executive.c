@@ -85,6 +85,8 @@ void * executive(void * v)
 		pthread_create(&tasks[i].thread, &attr, p_task_handler, &tasks[i]);
 	}
 
+	sleep(4);
+
 	for(int i = 0; i<4*NUM_FRAMES; i++){	//main loop
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
 		for(int a = 0; a < sizeof(schedule); a++){
@@ -98,8 +100,8 @@ void * executive(void * v)
 			pthread_mutex_unlock(&tasks[schedule[a]].mutex);
 		}
 
-		int nanosec = H_PERIOD/NUM_FRAMES;
-		printf("waiting... utime.tv_usec: %ld\n", utime.tv_usec);
+		int nanosec = H_PERIOD*10/NUM_FRAMES;
+		// printf("waiting... utime.tv_usec: %ld\n", utime.tv_usec);
 		gettimeofday(&utime,NULL);
 
 		time.tv_sec = utime.tv_sec;
@@ -109,7 +111,8 @@ void * executive(void * v)
 		pthread_mutex_lock(&mu);
 		pthread_cond_timedwait(&co, &mu, &time );
 		pthread_mutex_unlock(&mu);
-		printf("waited %ld ns; utime.tv_sec: %ld\n",time.tv_nsec - utime.tv_usec*1000, utime.tv_sec);
+		printf("#########\n");
+		// printf("waited %ld ns; utime.tv_sec: %ld\n",time.tv_nsec - utime.tv_usec*1000, utime.tv_sec);
 	}
 
 	for(int i = 0; i<NUM_P_TASKS;i++) pthread_join(tasks[i].thread, NULL);
