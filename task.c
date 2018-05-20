@@ -96,21 +96,21 @@ void task_destroy()
 void task0_code()
 {
 	printf("0\n");
-  busy_wait(2000000);
+  busy_wait(20);
   return;
 }
 
 void task1_code()
 {
 	printf("1\n");
-	busy_wait(3000000);
+	busy_wait(30);
 	return;
 }
 
 void task2_code()
 {
 	printf("2\n");
-	busy_wait(4000000);
+	busy_wait(40);
   return;
 }
 
