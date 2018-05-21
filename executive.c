@@ -31,6 +31,8 @@ struct task{
 	int cycles;
 };
 
+int quit = 0;
+
 void ap_task_request()
 {
 	return;
@@ -39,14 +41,16 @@ void ap_task_request()
 void * p_task_handler(void * a) //periodic task handler
 {
 	struct task * t = (struct task *) a;
-	for(int i = 0; i<t->cycles*ROUNDS; i++){
+	while(1){
 		pthread_cond_wait(&t->cond, &t->mutex);
 		t->state = RUNNING;
 		P_TASKS[t->id]();
 		t->state = IDLE;
+		if(quit == 1){
+			printf("quitting... %d\n", t->id);
+			return NULL;
+		}
 	}
-	printf("returning... %d\n", t->id);
-	return NULL;
 }
 
 void ap_task_handler()
@@ -66,9 +70,10 @@ void * executive(void * v)
 
 	for(int i = 0; i<NUM_P_TASKS; i++){
 		struct sched_param param;
-		param.sched_priority = 98 - i;
+		param.sched_priority = 99;
 		pthread_attr_t attr;
 		pthread_attr_init(&attr);
+		pthread_attr_setinheritsched( &attr, PTHREAD_EXPLICIT_SCHED );
 		pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
 		pthread_attr_setschedparam(&attr, &param);
 #ifdef MULTIPROC
@@ -91,18 +96,17 @@ void * executive(void * v)
 		pthread_create(&tasks[i].thread, &attr, p_task_handler, &tasks[i]);
 	}
 
-	sleep(4);
-
 	int skip = 0;
 
 	for(int i = 0; i<ROUNDS*NUM_FRAMES; i++){	//main loop
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
 		for(int a = 0; a < NUM_P_TASKS; a++) if(tasks[a].state != IDLE) skip = 1; //if a task is running or pending skip this frame
+
 		for(int a = 0; a < sizeof(schedule); a++){
-			if(!skip){
+			if(skip != 1){
 				if(schedule[a] == -1) break;
 				struct sched_param param;
-				param.sched_priority = 98 - a;
+				param.sched_priority = 97 - a;
 				pthread_mutex_lock(&tasks[schedule[a]].mutex);
 				tasks[schedule[a]].state = PENDING;
 				pthread_setschedparam(tasks[schedule[a]].thread, SCHED_FIFO, &param);
@@ -115,8 +119,7 @@ void * executive(void * v)
 			printf("Frame overrun! Skipping this frame!\n");
 			skip = 0;
 		}
-		//int nanosec = H_PERIOD*100000/NUM_FRAMES;
-		int nanosec = 1000000000;
+		int nanosec = H_PERIOD*10000000/NUM_FRAMES;
 		// printf("waiting... utime.tv_usec: %ld\n", utime.tv_usec);
 		gettimeofday(&utime,NULL);
 
@@ -130,6 +133,9 @@ void * executive(void * v)
 		printf("#########\n");
 		// printf("waited %ld ns; utime.tv_sec: %ld\n",time.tv_nsec - utime.tv_usec*1000, utime.tv_sec);
 	}
+
+	quit = 1;
+	for(int a = 0; a < NUM_P_TASKS; a++) pthread_cond_signal(&tasks[a].cond);
 
 	for(int i = 0; i<NUM_P_TASKS;i++) pthread_join(tasks[i].thread, NULL);
 	for(int i = 0; i<NUM_P_TASKS; i++){
@@ -145,9 +151,10 @@ int main(){
 	task_init();
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
-	pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
 	struct sched_param param;
-	param.sched_priority = 99;
+	param.sched_priority = 98;
+	pthread_attr_setinheritsched( &attr, PTHREAD_EXPLICIT_SCHED );
+	pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
 	pthread_attr_setschedparam(&attr, &param);
 
 #ifdef MULTIPROC
