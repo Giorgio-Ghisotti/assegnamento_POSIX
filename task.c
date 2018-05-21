@@ -79,7 +79,7 @@ void task_init()
     SCHEDULE[2][2] = 4;
 	SCHEDULE[2][3] = -1;
 
-	SLACK[2] = 30; /* tutto il frame */
+	SLACK[2] = 40; /* tutto il frame */
 
 	/* Custom Code */
 	busy_wait_init();
@@ -138,5 +138,8 @@ void task4_code()
 
 void ap_task_code()
 {
-	/* Custom Code */
+	printf("I am an AP task!\n");
+	busy_wait(40);
+	printf("I WAS an AP task!\n");
+	return;
 }

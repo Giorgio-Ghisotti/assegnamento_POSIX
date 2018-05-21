@@ -28,14 +28,14 @@ struct task{
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 	int state;
-	int cycles;
 };
 
 int quit = 0;
+int run_ap = 0;
 
 void ap_task_request()
 {
-	return;
+	run_ap = 1;
 }
 
 void * p_task_handler(void * a) //periodic task handler
@@ -43,19 +43,29 @@ void * p_task_handler(void * a) //periodic task handler
 	struct task * t = (struct task *) a;
 	while(1){
 		pthread_cond_wait(&t->cond, &t->mutex);
-		t->state = RUNNING;
-		P_TASKS[t->id]();
-		t->state = IDLE;
 		if(quit == 1){
 			printf("quitting... %d\n", t->id);
 			return NULL;
 		}
+		t->state = RUNNING;
+		P_TASKS[t->id]();
+		if(t->id == 2) ap_task_request();
+		t->state = IDLE;
 	}
 }
 
-void ap_task_handler()
-{
-	return;
+void * ap_task_handler(void * a){
+	struct task * t = (struct task *) a;
+	while(1){
+		pthread_cond_wait(&t->cond, &t->mutex);
+		if(quit == 1){
+			printf("quitting... %d\n", t->id);
+			return NULL;
+		}
+		t->state = RUNNING;
+		AP_TASK();
+		t->state = IDLE;
+	}
 }
 
 void * executive(void * v)
@@ -83,18 +93,33 @@ void * executive(void * v)
 #endif
 		tasks[i].id = i;
 		tasks[i].state = IDLE;
-		tasks[i].cycles = 0;
-		for(int b = 0; b<NUM_FRAMES; b++){
-			int c = 0;
-			while(SCHEDULE[b][c] != -1){
-				if(SCHEDULE[b][c] == i) tasks[i].cycles++;
-				c++;
-			}
-		}
 		pthread_mutex_init(&tasks[i].mutex, NULL);
 		pthread_cond_init(&tasks[i].cond, NULL);
 		pthread_create(&tasks[i].thread, &attr, p_task_handler, &tasks[i]);
 	}
+
+	//AP TASK
+	struct sched_param apparam;
+	apparam.sched_priority = 1;
+	pthread_attr_t apattr;
+	pthread_attr_init(&apattr);
+	pthread_attr_setinheritsched( &apattr, PTHREAD_EXPLICIT_SCHED );
+	pthread_attr_setschedpolicy(&apattr, SCHED_FIFO);
+	pthread_attr_setschedparam(&apattr, &apparam);
+#ifdef MULTIPROC
+  CPU_ZERO(&cpuset);
+  CPU_SET(0, &cpuset);
+  pthread_attr_setaffinity_np( &apattr, sizeof(cpu_set_t), &cpuset );
+#endif
+
+	struct task aptask;
+	aptask.id = -1;
+	aptask.state = IDLE;
+	pthread_mutex_init(&aptask.mutex, NULL);
+	pthread_cond_init(&aptask.cond, NULL);
+	pthread_create(&aptask.thread, &apattr, ap_task_handler, &aptask);
+
+	///////
 
 	int skip = 0;
 
@@ -113,6 +138,17 @@ void * executive(void * v)
 				pthread_cond_signal(&tasks[schedule[a]].cond);
 				pthread_mutex_unlock(&tasks[schedule[a]].mutex);
 			}
+		}
+
+		if(run_ap && !skip){
+			struct sched_param param;
+			param.sched_priority = 98-NUM_P_TASKS;
+			pthread_mutex_lock(&aptask.mutex);
+			aptask.state = PENDING;
+			pthread_setschedparam(aptask.thread, SCHED_FIFO, &param);
+			pthread_cond_signal(&aptask.cond);
+			pthread_mutex_unlock(&aptask.mutex);
+			run_ap = 0;
 		}
 
 		if(skip){
