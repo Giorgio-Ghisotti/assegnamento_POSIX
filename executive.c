@@ -1,4 +1,7 @@
 /* traccia dell'executive (pseudocodice) */
+#ifdef MULTIPROC
+#define _GNU_SOURCE
+#endif
 
 #include <stdio.h>
 #include <unistd.h>
@@ -6,6 +9,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <sched.h>
 #include "task.h"
 #include "busy_wait.h"
 
@@ -16,6 +20,7 @@
 #ifdef MULTIPROC
 	cpu_set_t cpuset;
 #endif
+
 
 struct task{
 	pthread_t thread;
@@ -67,13 +72,12 @@ void * executive(void * v)
 		pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
 		pthread_attr_setschedparam(&attr, &param);
 #ifdef MULTIPROC
-		cpu_set_t cpuset;
   	CPU_ZERO(&cpuset);
   	CPU_SET(0, &cpuset);
   	pthread_attr_setaffinity_np( &attr, sizeof(cpu_set_t), &cpuset );
 #endif
 		tasks[i].id = i;
-		tasks[i].state = PENDING;
+		tasks[i].state = IDLE;
 		tasks[i].cycles = 0;
 		for(int b = 0; b<NUM_FRAMES; b++){
 			int c = 0;
@@ -89,21 +93,30 @@ void * executive(void * v)
 
 	sleep(4);
 
+	int skip = 0;
+
 	for(int i = 0; i<ROUNDS*NUM_FRAMES; i++){	//main loop
-		printf("i=%d\n", i);
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
+		for(int a = 0; a < NUM_P_TASKS; a++) if(tasks[a].state != IDLE) skip = 1; //if a task is running or pending skip this frame
 		for(int a = 0; a < sizeof(schedule); a++){
-			if(schedule[a] == -1) break;
-			struct sched_param param;
-			param.sched_priority = 98 - a;
-			pthread_mutex_lock(&tasks[schedule[a]].mutex);
-			tasks[schedule[a]].state = PENDING;
-			pthread_setschedparam(tasks[schedule[a]].thread, SCHED_FIFO, &param);
-			pthread_cond_signal(&tasks[schedule[a]].cond);
-			pthread_mutex_unlock(&tasks[schedule[a]].mutex);
+			if(!skip){
+				if(schedule[a] == -1) break;
+				struct sched_param param;
+				param.sched_priority = 98 - a;
+				pthread_mutex_lock(&tasks[schedule[a]].mutex);
+				tasks[schedule[a]].state = PENDING;
+				pthread_setschedparam(tasks[schedule[a]].thread, SCHED_FIFO, &param);
+				pthread_cond_signal(&tasks[schedule[a]].cond);
+				pthread_mutex_unlock(&tasks[schedule[a]].mutex);
+			}
 		}
 
-		int nanosec = H_PERIOD*10/NUM_FRAMES;
+		if(skip){
+			printf("Frame overrun! Skipping this frame!\n");
+			skip = 0;
+		}
+		//int nanosec = H_PERIOD*100000/NUM_FRAMES;
+		int nanosec = 1000000000;
 		// printf("waiting... utime.tv_usec: %ld\n", utime.tv_usec);
 		gettimeofday(&utime,NULL);
 
@@ -117,11 +130,8 @@ void * executive(void * v)
 		printf("#########\n");
 		// printf("waited %ld ns; utime.tv_sec: %ld\n",time.tv_nsec - utime.tv_usec*1000, utime.tv_sec);
 	}
-		printf("pluto\n");
 
-	for(int i = 0; i<NUM_P_TASKS;i++){
-		pthread_join(tasks[i].thread, NULL);
-	}
+	for(int i = 0; i<NUM_P_TASKS;i++) pthread_join(tasks[i].thread, NULL);
 	for(int i = 0; i<NUM_P_TASKS; i++){
 		pthread_mutex_destroy(&tasks[i].mutex);
 		pthread_cond_destroy(&tasks[i].cond);
