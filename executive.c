@@ -12,6 +12,7 @@
 #define PENDING 0
 #define RUNNING 1
 #define IDLE 2
+#define ROUNDS 4
 #ifdef MULTIPROC
 	cpu_set_t cpuset;
 #endif
@@ -33,7 +34,7 @@ void ap_task_request()
 void * p_task_handler(void * a) //periodic task handler
 {
 	struct task * t = (struct task *) a;
-	for(int i = 0; i<t->cycles*NUM_FRAMES; i++){
+	for(int i = 0; i<t->cycles*ROUNDS; i++){
 		pthread_cond_wait(&t->cond, &t->mutex);
 		t->state = RUNNING;
 		P_TASKS[t->id]();
@@ -88,7 +89,8 @@ void * executive(void * v)
 
 	sleep(4);
 
-	for(int i = 0; i<4*NUM_FRAMES; i++){	//main loop
+	for(int i = 0; i<ROUNDS*NUM_FRAMES; i++){	//main loop
+		printf("i=%d\n", i);
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
 		for(int a = 0; a < sizeof(schedule); a++){
 			if(schedule[a] == -1) break;
@@ -115,12 +117,16 @@ void * executive(void * v)
 		printf("#########\n");
 		// printf("waited %ld ns; utime.tv_sec: %ld\n",time.tv_nsec - utime.tv_usec*1000, utime.tv_sec);
 	}
+		printf("pluto\n");
 
-	for(int i = 0; i<NUM_P_TASKS;i++) pthread_join(tasks[i].thread, NULL);
+	for(int i = 0; i<NUM_P_TASKS;i++){
+		pthread_join(tasks[i].thread, NULL);
+	}
 	for(int i = 0; i<NUM_P_TASKS; i++){
 		pthread_mutex_destroy(&tasks[i].mutex);
 		pthread_cond_destroy(&tasks[i].cond);
 	}
+	printf("returning...\n");
 	return NULL;
 }
 
