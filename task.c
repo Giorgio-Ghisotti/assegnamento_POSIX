@@ -13,11 +13,13 @@
 #define NUM_FRAMES_ 3
 
 /* Numero di task */
-#define NUM_P_TASKS_ 3
+#define NUM_P_TASKS_ 5
 
 void task0_code();
 void task1_code();
 void task2_code();
+void task3_code();
+void task4_code();
 
 void ap_task_code();
 
@@ -39,6 +41,8 @@ void task_init()
 	P_TASKS[0] = task0_code;
 	P_TASKS[1] = task1_code;
     P_TASKS[2] = task2_code;
+    P_TASKS[3] = task3_code;
+    P_TASKS[4] = task4_code;
 	/* ... */
 
 	/* Inizializzazione di AP_TASK */
@@ -54,26 +58,28 @@ void task_init()
     SCHEDULE[0][2] = 2;
     SCHEDULE[0][3] = -1;
 
-	SLACK[0] = 1; /* tutto il frame */
+	SLACK[0] = 30; /* tutto il frame */
 
 
 	/* frame 1 */
-	SCHEDULE[1] = (int *) malloc( sizeof( int ) * 3 );
+	SCHEDULE[1] = (int *) malloc( sizeof( int ) * 4 );
 	SCHEDULE[1][0] = 0;
     SCHEDULE[1][1] = 1;
-	SCHEDULE[1][2] = -1;
+	SCHEDULE[1][2] = 3;
+	SCHEDULE[1][3] = -1;
 
-	SLACK[1] = 5; /* tutto il frame */
+
+	SLACK[1] = 30; /* tutto il frame */
 
 
 	/* frame 2 */
 	SCHEDULE[2] = (int *) malloc( sizeof( int ) * 4 );
 	SCHEDULE[2][0] = 0;
     SCHEDULE[2][1] = 1;
-    SCHEDULE[2][2] = 2;
+    SCHEDULE[2][2] = 4;
 	SCHEDULE[2][3] = -1;
 
-	SLACK[2] = 1; /* tutto il frame */
+	SLACK[2] = 30; /* tutto il frame */
 
 	/* Custom Code */
 	busy_wait_init();
@@ -103,16 +109,31 @@ void task0_code()
 void task1_code()
 {
 	printf("1\n");
-	busy_wait(30);
+	busy_wait(20);
 	return;
 }
 
 void task2_code()
 {
 	printf("2\n");
-	busy_wait(40);
+	busy_wait(30);
   return;
 }
+
+void task3_code()
+{
+	printf("3\n");
+	busy_wait(30);
+  return;
+}
+
+void task4_code()
+{
+	printf("4\n");
+	busy_wait(20);
+  return;
+}
+
 
 
 void ap_task_code()
