@@ -133,8 +133,6 @@ void * executive(void * v)
 
 	int skip = 0;
 
-	struct timeval exbefore, exafter;
-
 	for(int i = 0; i<ROUNDS*NUM_FRAMES; i++){	//main loop
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
 		for(int a = 0; a < NUM_P_TASKS; a++) if(tasks[a].state != IDLE) skip = 1; //if a task is running or pending skip this frame
