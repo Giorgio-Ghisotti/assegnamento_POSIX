@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O3 -Wall $(PRINT)
-LFLAGS = -DMULTIPROC
+LFLAGS = -DMULTIPROC -g
 
 all : executive
 

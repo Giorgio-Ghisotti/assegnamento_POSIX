@@ -128,6 +128,33 @@ void * executive(void * v)
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
 		for(int a = 0; a < NUM_P_TASKS; a++) if(tasks[a].state != IDLE) skip = 1; //if a task is running or pending skip this frame
 
+		int nanosec = 0;
+
+		if(run_ap && !skip){
+			struct sched_param param;
+			param.sched_priority = 98-NUM_P_TASKS;
+			pthread_mutex_lock(&aptask.mutex);
+			aptask.state = PENDING;
+			pthread_setschedparam(aptask.thread, SCHED_FIFO, &param);
+			pthread_cond_signal(&aptask.cond);
+			pthread_mutex_unlock(&aptask.mutex);
+			run_ap = 0;
+		}
+
+		if(aptask.state != IDLE){
+			nanosec = (SLACK[i%NUM_FRAMES]-10)*1000000;
+			printf("waiting %d ns\n", nanosec);
+			gettimeofday(&utime,NULL);
+
+			time.tv_sec = utime.tv_sec;
+			time.tv_nsec = utime.tv_usec * 1000;
+			time.tv_sec += ( time.tv_nsec + nanosec ) / 1000000000;
+			time.tv_nsec = ( time.tv_nsec + nanosec ) % 1000000000;
+			pthread_mutex_lock(&mu);
+			pthread_cond_timedwait(&co, &mu, &time );
+			pthread_mutex_unlock(&mu);
+		}
+
 		for(int a = 0; a < sizeof(schedule); a++){
 			if(skip != 1){
 				if(schedule[a] == -1) break;
@@ -141,22 +168,11 @@ void * executive(void * v)
 			}
 		}
 
-		if(run_ap && !skip){
-			struct sched_param param;
-			param.sched_priority = 98-NUM_P_TASKS;
-			pthread_mutex_lock(&aptask.mutex);
-			aptask.state = PENDING;
-			pthread_setschedparam(aptask.thread, SCHED_FIFO, &param);
-			pthread_cond_signal(&aptask.cond);
-			pthread_mutex_unlock(&aptask.mutex);
-			run_ap = 0;
-		}
-
 		if(skip){
 			printf("ERROR! Frame overrun! Skipping this frame!\n");
 			skip = 0;
 		}
-		int nanosec = H_PERIOD*10000000/NUM_FRAMES;
+		nanosec = H_PERIOD*10000000/NUM_FRAMES - nanosec;
 		// printf("waiting... utime.tv_usec: %ld\n", utime.tv_usec);
 		gettimeofday(&utime,NULL);
 
