@@ -32,10 +32,12 @@ struct task{
 
 int quit = 0;
 int run_ap = 0;
+struct task aptask;
 
 void ap_task_request()
 {
-	run_ap = 1;
+	if(aptask.state == IDLE) run_ap = 1;
+	else printf("ERROR! AP task was released before its previous instance finished!\n");
 }
 
 void * p_task_handler(void * a) //periodic task handler
@@ -112,7 +114,6 @@ void * executive(void * v)
   pthread_attr_setaffinity_np( &apattr, sizeof(cpu_set_t), &cpuset );
 #endif
 
-	struct task aptask;
 	aptask.id = -1;
 	aptask.state = IDLE;
 	pthread_mutex_init(&aptask.mutex, NULL);
@@ -152,7 +153,7 @@ void * executive(void * v)
 		}
 
 		if(skip){
-			printf("Frame overrun! Skipping this frame!\n");
+			printf("ERROR! Frame overrun! Skipping this frame!\n");
 			skip = 0;
 		}
 		int nanosec = H_PERIOD*10000000/NUM_FRAMES;

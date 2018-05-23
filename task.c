@@ -139,7 +139,7 @@ void task4_code()
 void ap_task_code()
 {
 	printf("I am an AP task!\n");
-	busy_wait(40);
+	busy_wait(100);
 	printf("I WAS an AP task!\n");
 	return;
 }
