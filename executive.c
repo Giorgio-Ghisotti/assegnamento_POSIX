@@ -43,6 +43,7 @@ void ap_task_request()
 void * p_task_handler(void * a) //periodic task handler
 {
 	struct task * t = (struct task *) a;
+	pthread_mutex_lock(&t->mutex);
 	while(1){
 		pthread_cond_wait(&t->cond, &t->mutex);
 		if(quit == 1){
@@ -50,7 +51,9 @@ void * p_task_handler(void * a) //periodic task handler
 			return NULL;
 		}
 		t->state = RUNNING;
+		pthread_mutex_unlock(&t->mutex);
 		P_TASKS[t->id]();
+		pthread_mutex_lock(&t->mutex);
 		if(t->id == 2) ap_task_request();
 		t->state = IDLE;
 	}
@@ -58,6 +61,7 @@ void * p_task_handler(void * a) //periodic task handler
 
 void * ap_task_handler(void * a){
 	struct task * t = (struct task *) a;
+	pthread_mutex_lock(&t->mutex);
 	while(1){
 		pthread_cond_wait(&t->cond, &t->mutex);
 		if(quit == 1){
@@ -65,7 +69,9 @@ void * ap_task_handler(void * a){
 			return NULL;
 		}
 		t->state = RUNNING;
+		pthread_mutex_unlock(&t->mutex);
 		AP_TASK();
+		pthread_mutex_lock(&t->mutex);
 		t->state = IDLE;
 	}
 }
@@ -124,6 +130,8 @@ void * executive(void * v)
 
 	int skip = 0;
 
+	struct timeval exbefore, exafter;
+
 	for(int i = 0; i<ROUNDS*NUM_FRAMES; i++){	//main loop
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
 		for(int a = 0; a < NUM_P_TASKS; a++) if(tasks[a].state != IDLE) skip = 1; //if a task is running or pending skip this frame
@@ -142,8 +150,8 @@ void * executive(void * v)
 		}
 
 		if(aptask.state != IDLE){
-			nanosec = (SLACK[i%NUM_FRAMES]-10)*1000000;
-			printf("waiting %d ns\n", nanosec);
+			nanosec = (SLACK[i%NUM_FRAMES])*1000000;
+			// printf("waiting %d ns\n", nanosec);
 			gettimeofday(&utime,NULL);
 
 			time.tv_sec = utime.tv_sec;
@@ -186,9 +194,7 @@ void * executive(void * v)
 		printf("#########\n");
 		// printf("waited %ld ns; utime.tv_sec: %ld\n",time.tv_nsec - utime.tv_usec*1000, utime.tv_sec);
 	}
-
-	quit = 1;
-	for(int a = 0; a < NUM_P_TASKS; a++) pthread_cond_signal(&tasks[a].cond);
+	for(int a = 0; a < NUM_P_TASKS; a++) pthread_cancel(tasks[a].thread);
 
 	for(int i = 0; i<NUM_P_TASKS;i++) pthread_join(tasks[i].thread, NULL);
 	for(int i = 0; i<NUM_P_TASKS; i++){

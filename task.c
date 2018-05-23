@@ -101,36 +101,61 @@ void task_destroy()
 
 void task0_code()
 {
+	struct timeval before;
+	struct timeval after;
+	gettimeofday(&before, NULL);
 	printf("0\n");
-  busy_wait(20);
+	gettimeofday(&after, NULL);
+	long int t = (after.tv_usec - before.tv_usec)/1000;
+  busy_wait(20 - t%20);
   return;
 }
 
 void task1_code()
 {
+	struct timeval before;
+	struct timeval after;
+	gettimeofday(&before, NULL);
 	printf("1\n");
-	busy_wait(20);
+	gettimeofday(&after, NULL);
+	long int t = (after.tv_usec - before.tv_usec)/1000;
+	busy_wait(20 - t%20);
 	return;
 }
 
 void task2_code()
 {
+	struct timeval before;
+	struct timeval after;
+	gettimeofday(&before, NULL);
 	printf("2\n");
-	busy_wait(30);
+	gettimeofday(&after, NULL);
+	long int t = (after.tv_usec - before.tv_usec)/1000;
+	busy_wait(30 - t%30);
   return;
 }
 
 void task3_code()
 {
+	struct timeval before;
+	struct timeval after;
+	gettimeofday(&before, NULL);
 	printf("3\n");
-	busy_wait(30);
+	gettimeofday(&after, NULL);
+	long int t = (after.tv_usec - before.tv_usec)/1000;
+	busy_wait(30 - t%30);
   return;
 }
 
 void task4_code()
 {
+	struct timeval before;
+	struct timeval after;
+	gettimeofday(&before, NULL);
 	printf("4\n");
-	busy_wait(20);
+	gettimeofday(&after, NULL);
+	long int t = (after.tv_usec - before.tv_usec)/1000;
+	busy_wait(20 - t%20);
   return;
 }
 
