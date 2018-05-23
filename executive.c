@@ -1,4 +1,3 @@
-/* traccia dell'executive (pseudocodice) */
 #ifdef MULTIPROC
 #define _GNU_SOURCE
 #endif
