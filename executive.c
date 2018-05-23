@@ -20,8 +20,7 @@
 	cpu_set_t cpuset;
 #endif
 
-
-struct task{
+struct task {
 	pthread_t thread;
 	unsigned int id;
 	pthread_mutex_t mutex;
@@ -29,214 +28,170 @@ struct task{
 	int state;
 };
 
-int quit = 0;
-int run_ap = 0;
-struct task aptask;
+int run_ap = 0;	//is there an aperiodic task waiting to be scheduled?
+struct task aptask;	//aperiodic task
 
-pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;	//EXECUTIVE's semaphores
 pthread_cond_t co = PTHREAD_COND_INITIALIZER;
 
-void ap_task_request()
-{
+void ap_task_request();
+void * p_task_handler(void * a);
+void * ap_task_handler(void * a);
+void init_attr(int priority, pthread_attr_t *attr);
+void start_task(struct task * t, int id, void *(* start_routine) (void *), int priority);
+void set_priority(struct task * t, int priority);
+void lock_signal(struct task * t);
+void end_task(struct task * t);
+void exec_wait(struct timespec * time, struct timeval * utime, int nanosec);
+void * executive(void * v);
+
+int main() {
+	if(getuid() != 0 && printf("Please run this program as root.\n")) exit(1);
+	task_init();
+	struct task exe;
+	start_task(&exe, -2, executive, 98);
+	pthread_join(exe.thread, NULL);
+	return 0;
+}
+
+void * executive(void * v) {
+	struct timespec time;
+	struct timeval utime;
+
+	struct task tasks[NUM_P_TASKS];
+	for(int i = 0; i<NUM_P_TASKS; i++) start_task(&tasks[i], i, p_task_handler, 99);
+	start_task(&aptask, -1, ap_task_handler, 99);
+
+	int skip = 0;
+
+	for(int i = 0; i<ROUNDS*NUM_FRAMES; i++) {	//main loop
+		int *schedule = SCHEDULE[i%NUM_FRAMES];
+		for(int a = 0; a < NUM_P_TASKS; a++) if(tasks[a].state != IDLE) skip = 1; //if a task is running or pending skip this frame
+		int nanosec = 0;
+
+		if(run_ap && !skip) {
+			set_priority(&aptask, 1);
+			lock_signal(&aptask);
+		}
+
+		for(int a = 0; a < sizeof(schedule); a++) {
+			if(skip != 1) {
+				if(schedule[a] == -1) break;
+				set_priority(&tasks[schedule[a]], 96-a);
+				lock_signal(&tasks[schedule[a]]);
+			}
+		}
+
+		gettimeofday(&utime,NULL);
+		if(aptask.state != IDLE) {
+			nanosec = (SLACK[i%NUM_FRAMES])*1000000;
+			set_priority(&aptask, 97);
+			run_ap = 0;
+			exec_wait(&time, &utime, nanosec);
+			set_priority(&aptask, 97 - NUM_P_TASKS);
+		}
+
+		if(skip) {
+			printf("ERROR! Frame overrun! Skipping this frame!\n");
+			skip = 0;
+		}
+		nanosec = H_PERIOD*10000000/NUM_FRAMES;
+		exec_wait(&time, &utime, nanosec);
+		printf("#########\n");
+	}
+	for(int i = 0; i < NUM_P_TASKS; i++) end_task(&tasks[i]);
+	end_task(&aptask);
+	printf("returning...\n");
+	return NULL;
+}
+
+void ap_task_request() {
 	if(aptask.state == IDLE) run_ap = 1;
 	else printf("ERROR! AP task was released before its previous instance finished!\n");
 }
 
-void * p_task_handler(void * a) //periodic task handler
-{
+void * p_task_handler(void * a) {	//periodic task handler
 	struct task * t = (struct task *) a;
 	pthread_mutex_lock(&t->mutex);
-	while(1){
+	while(1) {
 		pthread_cond_wait(&t->cond, &t->mutex);
-		if(quit == 1){
-			printf("quitting... %d\n", t->id);
-			return NULL;
-		}
 		t->state = RUNNING;
 		pthread_mutex_unlock(&t->mutex);
-		P_TASKS[t->id]();
+		P_TASKS[t->id]();	//task's code
 		pthread_mutex_lock(&t->mutex);
 		if(t->id == 2) ap_task_request();
 		t->state = IDLE;
 	}
 }
 
-void * ap_task_handler(void * a){
+void * ap_task_handler(void * a) {	//aperiodic task handler
 	struct task * t = (struct task *) a;
 	pthread_mutex_lock(&t->mutex);
-	while(1){
+	while(1) {
 		pthread_cond_wait(&t->cond, &t->mutex);
-		if(quit == 1){
-			printf("quitting... %d\n", t->id);
-			return NULL;
-		}
 		t->state = RUNNING;
 		pthread_mutex_unlock(&t->mutex);
 		AP_TASK();
 		pthread_mutex_lock(&t->mutex);
 		t->state = IDLE;
 		pthread_mutex_lock(&mu);
-		pthread_cond_signal(&co);
+		pthread_cond_signal(&co);	//if the AP task's execution is shorter than the slack time, signal the executive to stop waiting
 		pthread_mutex_unlock(&mu);
 	}
 }
 
-void * executive(void * v)
-{
-	struct timespec time;
-	struct timeval utime;
-
-	struct task tasks[NUM_P_TASKS];
-
-	for(int i = 0; i<NUM_P_TASKS; i++){
-		struct sched_param param;
-		param.sched_priority = 99;
-		pthread_attr_t attr;
-		pthread_attr_init(&attr);
-		pthread_attr_setinheritsched( &attr, PTHREAD_EXPLICIT_SCHED );
-		pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
-		pthread_attr_setschedparam(&attr, &param);
-#ifdef MULTIPROC
-  	CPU_ZERO(&cpuset);
-  	CPU_SET(0, &cpuset);
-  	pthread_attr_setaffinity_np( &attr, sizeof(cpu_set_t), &cpuset );
-#endif
-		tasks[i].id = i;
-		tasks[i].state = IDLE;
-		pthread_mutex_init(&tasks[i].mutex, NULL);
-		pthread_cond_init(&tasks[i].cond, NULL);
-		pthread_create(&tasks[i].thread, &attr, p_task_handler, &tasks[i]);
-	}
-
-	//AP TASK
-	struct sched_param apparam;
-	apparam.sched_priority = 99;
-	pthread_attr_t apattr;
-	pthread_attr_init(&apattr);
-	pthread_attr_setinheritsched( &apattr, PTHREAD_EXPLICIT_SCHED );
-	pthread_attr_setschedpolicy(&apattr, SCHED_FIFO);
-	pthread_attr_setschedparam(&apattr, &apparam);
-#ifdef MULTIPROC
-  CPU_ZERO(&cpuset);
-  CPU_SET(0, &cpuset);
-  pthread_attr_setaffinity_np( &apattr, sizeof(cpu_set_t), &cpuset );
-#endif
-
-	aptask.id = -1;
-	aptask.state = IDLE;
-	pthread_mutex_init(&aptask.mutex, NULL);
-	pthread_cond_init(&aptask.cond, NULL);
-	pthread_create(&aptask.thread, &apattr, ap_task_handler, &aptask);
-
-	///////
-
-	int skip = 0;
-
-	struct timeval exbefore, exafter;
-
-	for(int i = 0; i<ROUNDS*NUM_FRAMES; i++){	//main loop
-		int *schedule = SCHEDULE[i%NUM_FRAMES];
-		for(int a = 0; a < NUM_P_TASKS; a++) if(tasks[a].state != IDLE) skip = 1; //if a task is running or pending skip this frame
-
-		int nanosec = 0;
-
-		if(run_ap && !skip){
-			struct sched_param param;
-			param.sched_priority = 1;
-			pthread_mutex_lock(&aptask.mutex);
-			aptask.state = PENDING;
-			pthread_setschedparam(aptask.thread, SCHED_FIFO, &param);
-			pthread_cond_signal(&aptask.cond);
-			pthread_mutex_unlock(&aptask.mutex);
-		}
-
-		for(int a = 0; a < sizeof(schedule); a++){
-			if(skip != 1){
-				if(schedule[a] == -1) break;
-				struct sched_param param;
-				param.sched_priority = 96 - a;
-				pthread_mutex_lock(&tasks[schedule[a]].mutex);
-				tasks[schedule[a]].state = PENDING;
-				pthread_setschedparam(tasks[schedule[a]].thread, SCHED_FIFO, &param);
-				pthread_cond_signal(&tasks[schedule[a]].cond);
-				pthread_mutex_unlock(&tasks[schedule[a]].mutex);
-			}
-		}
-
-		gettimeofday(&utime,NULL);
-		if(aptask.state != IDLE){
-			struct timeval bf, af;
-			gettimeofday(&bf, NULL);
-			nanosec = (SLACK[i%NUM_FRAMES])*1000000;
-			struct sched_param param;
-			param.sched_priority = 97;
-			pthread_mutex_lock(&aptask.mutex);
-			pthread_setschedparam(aptask.thread, SCHED_FIFO, &param);
-			pthread_mutex_unlock(&aptask.mutex);
-			run_ap = 0;
-
-			time.tv_sec = utime.tv_sec;
-			time.tv_nsec = utime.tv_usec * 1000;
-			time.tv_sec += ( time.tv_nsec + nanosec ) / 1000000000;
-			time.tv_nsec = ( time.tv_nsec + nanosec ) % 1000000000;
-			pthread_mutex_lock(&mu);
-			pthread_cond_timedwait(&co, &mu, &time );
-			pthread_mutex_unlock(&mu);
-
-			gettimeofday(&af, NULL);
-
-			param.sched_priority = 97 - NUM_P_TASKS;
-			pthread_mutex_lock(&aptask.mutex);
-			pthread_setschedparam(aptask.thread, SCHED_FIFO, &param);
-			pthread_mutex_unlock(&aptask.mutex);
-		}
-
-		if(skip){
-			printf("ERROR! Frame overrun! Skipping this frame!\n");
-			skip = 0;
-		}
-		nanosec = H_PERIOD*10000000/NUM_FRAMES;
-		// printf("waiting... utime.tv_usec: %ld\n", utime.tv_usec);
-		time.tv_sec = utime.tv_sec;
-		time.tv_nsec = utime.tv_usec * 1000;
-		time.tv_sec += ( time.tv_nsec + nanosec ) / 1000000000;
-		time.tv_nsec = ( time.tv_nsec + nanosec ) % 1000000000;
-		pthread_mutex_lock(&mu);
-		pthread_cond_timedwait(&co, &mu, &time );
-		pthread_mutex_unlock(&mu);
-		printf("#########\n");
-		// printf("waited %ld ns; utime.tv_sec: %ld\n",time.tv_nsec - utime.tv_usec*1000, utime.tv_sec);
-	}
-	for(int a = 0; a < NUM_P_TASKS; a++) pthread_cancel(tasks[a].thread);
-
-	for(int i = 0; i<NUM_P_TASKS;i++) pthread_join(tasks[i].thread, NULL);
-	for(int i = 0; i<NUM_P_TASKS; i++){
-		pthread_mutex_destroy(&tasks[i].mutex);
-		pthread_cond_destroy(&tasks[i].cond);
-	}
-	printf("returning...\n");
-	return NULL;
-}
-
-int main(){
-
-	task_init();
-	pthread_attr_t attr;
-	pthread_attr_init(&attr);
+void init_attr(int priority, pthread_attr_t *attr) {	//initialize thread attributes with given parameters and priority
 	struct sched_param param;
-	param.sched_priority = 98;
-	pthread_attr_setinheritsched( &attr, PTHREAD_EXPLICIT_SCHED );
-	pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
-	pthread_attr_setschedparam(&attr, &param);
-
+	param.sched_priority = priority;
+	pthread_attr_init(attr);
+	pthread_attr_setinheritsched(attr, PTHREAD_EXPLICIT_SCHED);
+	pthread_attr_setschedpolicy(attr, SCHED_FIFO);
+	pthread_attr_setschedparam(attr, &param);
 #ifdef MULTIPROC
   CPU_ZERO(&cpuset);
   CPU_SET(0, &cpuset);
-  pthread_attr_setaffinity_np( &attr, sizeof(cpu_set_t), &cpuset );
+  pthread_attr_setaffinity_np(attr, sizeof(cpu_set_t), &cpuset);
 #endif
+}
 
-	pthread_t exe;
-	pthread_create(&exe, &attr, executive, NULL);
-	pthread_join(exe, NULL);
-	return 0;
+void start_task(struct task * t, int id, void *(* start_routine) (void *), int priority) {	//create thread for given task
+	pthread_attr_t attr;
+	init_attr(priority, &attr);	//initialize thread attributes
+	t->id = id;
+	t->state = IDLE;
+	pthread_mutex_init(&t->mutex, NULL);
+	pthread_cond_init(&t->cond, NULL);
+	pthread_create(&t->thread, &attr, start_routine, t);
+}
+
+void set_priority(struct task * t, int priority) {
+	struct sched_param param;
+	param.sched_priority = priority;
+	pthread_mutex_lock(&t->mutex);
+	pthread_setschedparam(t->thread, SCHED_FIFO, &param);
+	pthread_mutex_unlock(&t->mutex);
+}
+
+void lock_signal(struct task * t) {
+	pthread_mutex_lock(&t->mutex);
+	t->state = PENDING;
+	pthread_cond_signal(&t->cond);
+	pthread_mutex_unlock(&t->mutex);
+}
+
+void end_task(struct task * t) {
+		pthread_cancel(t->thread);
+		pthread_join(t->thread, NULL);
+		pthread_mutex_destroy(&t->mutex);
+		pthread_cond_destroy(&t->cond);
+}
+
+void exec_wait(struct timespec * time, struct timeval * utime, int nanosec) {
+	time->tv_sec = utime->tv_sec;
+	time->tv_nsec = utime->tv_usec * 1000;
+	time->tv_sec += ( time->tv_nsec + nanosec ) / 1000000000;
+	time->tv_nsec = ( time->tv_nsec + nanosec ) % 1000000000;
+	pthread_mutex_lock(&mu);
+	pthread_cond_timedwait(&co, &mu, time);
+	pthread_mutex_unlock(&mu);
 }

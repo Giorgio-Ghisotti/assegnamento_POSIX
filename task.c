@@ -102,35 +102,35 @@ void task_destroy()
 void task0_code()	//WCET = 20
 {
 	printf("0\n");
-  busy_wait(19);
+  busy_wait(15);
   return;
 }
 
 void task1_code()	//WCET = 20
 {
 	printf("1\n");
-	busy_wait(19);
+	busy_wait(15);
 	return;
 }
 
 void task2_code()	//WCET = 30
 {
 	printf("2\n");
-	busy_wait(29);
+	busy_wait(25);
   return;
 }
 
 void task3_code()	//WCET = 30
 {
 	printf("3\n");
-	busy_wait(29);
+	busy_wait(25);
   return;
 }
 
 void task4_code()	//WCET = 20
 {
 	printf("4\n");
-	busy_wait(19);
+	busy_wait(15);
   return;
 }
 
@@ -139,7 +139,7 @@ void task4_code()	//WCET = 20
 void ap_task_code()	//WCET = 40
 {
 	printf("AP task running!\n");
-	busy_wait(39);
+	busy_wait(35);
 	printf("AP task going to sleep!\n");
 	return;
 }
