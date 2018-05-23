@@ -99,72 +99,47 @@ void task_destroy()
 
 /* Nota: nel codice dei task e' lecito chiamare ap_task_request() */
 
-void task0_code()
+void task0_code()	//WCET = 20
 {
-	struct timeval before;
-	struct timeval after;
-	gettimeofday(&before, NULL);
 	printf("0\n");
-	gettimeofday(&after, NULL);
-	long int t = (after.tv_usec - before.tv_usec)/1000;
-  busy_wait(20 - t%20);
+  busy_wait(19);
   return;
 }
 
-void task1_code()
+void task1_code()	//WCET = 20
 {
-	struct timeval before;
-	struct timeval after;
-	gettimeofday(&before, NULL);
 	printf("1\n");
-	gettimeofday(&after, NULL);
-	long int t = (after.tv_usec - before.tv_usec)/1000;
-	busy_wait(20 - t%20);
+	busy_wait(19);
 	return;
 }
 
-void task2_code()
+void task2_code()	//WCET = 30
 {
-	struct timeval before;
-	struct timeval after;
-	gettimeofday(&before, NULL);
 	printf("2\n");
-	gettimeofday(&after, NULL);
-	long int t = (after.tv_usec - before.tv_usec)/1000;
-	busy_wait(30 - t%30);
+	busy_wait(29);
   return;
 }
 
-void task3_code()
+void task3_code()	//WCET = 30
 {
-	struct timeval before;
-	struct timeval after;
-	gettimeofday(&before, NULL);
 	printf("3\n");
-	gettimeofday(&after, NULL);
-	long int t = (after.tv_usec - before.tv_usec)/1000;
-	busy_wait(30 - t%30);
+	busy_wait(29);
   return;
 }
 
-void task4_code()
+void task4_code()	//WCET = 20
 {
-	struct timeval before;
-	struct timeval after;
-	gettimeofday(&before, NULL);
 	printf("4\n");
-	gettimeofday(&after, NULL);
-	long int t = (after.tv_usec - before.tv_usec)/1000;
-	busy_wait(20 - t%20);
+	busy_wait(19);
   return;
 }
 
 
 
-void ap_task_code()
+void ap_task_code()	//WCET = 40
 {
-	printf("I am an AP task!\n");
-	busy_wait(40);
-	printf("I WAS an AP task!\n");
+	printf("AP task running!\n");
+	busy_wait(39);
+	printf("AP task going to sleep!\n");
 	return;
 }
