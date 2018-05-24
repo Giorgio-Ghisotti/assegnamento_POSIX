@@ -117,6 +117,7 @@ void task2_code()	//WCET = 30
 {
 	printf("2\n");
 	busy_wait(29);
+	ap_task_request();
   return;
 }
 
