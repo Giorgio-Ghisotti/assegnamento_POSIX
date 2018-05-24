@@ -137,7 +137,7 @@ void task4_code()	//WCET = 20
 void ap_task_code()	//WCET = 40
 {
 	printf("AP task running!\n");
-	busy_wait(39);
+	busy_wait(120);
 	printf("AP task going to sleep!\n");
 	return;
 }

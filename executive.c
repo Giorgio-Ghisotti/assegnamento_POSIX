@@ -62,41 +62,42 @@ void * executive(void * v) {
 	for(int i = 0; i<NUM_P_TASKS; i++) start_task(&tasks[i], i, p_task_handler, 99);
 	start_task(&aptask, -1, ap_task_handler, 99);
 
-	int skip = 0;
-
 	for(int i = 0; i<ROUNDS*NUM_FRAMES; i++) {	//main loop
 		int *schedule = SCHEDULE[i%NUM_FRAMES];
-		for(int a = 0; a < NUM_P_TASKS; a++) if(tasks[a].state != IDLE) skip = 1; //if a task is running or pending skip this frame
-		int nanosec = 0;
+		for(int a = 0; a < NUM_P_TASKS; a++) {
+			if(tasks[a].state != IDLE){
+				printf("Frame overrun for task %d!\n", a);
+				if(tasks[a].state == PENDING){
+					tasks[a].state = IDLE;
+					printf("Aborting task %d...\n", a);
+				}
+			}
+		}
 
-		if(run_ap && !skip) {
+		if(run_ap && aptask.state != IDLE) {
+			printf("ERROR! AP task was released before its previous instance finished!\n");
+		} else if(run_ap) {
 			set_priority(&aptask, 1);
 			lock_signal(&aptask);
 		}
 
 		for(int a = 0; a < sizeof(schedule); a++) {
-			if(skip != 1) {
-				if(schedule[a] == -1) break;
+			if(schedule[a] == -1) break;
+			if(tasks[schedule[a]].state == IDLE) {
 				set_priority(&tasks[schedule[a]], 96-a);
 				lock_signal(&tasks[schedule[a]]);
-			}
+			} else printf("Skipping release this cycle for task %d...\n", schedule[a]);
 		}
 
 		gettimeofday(&utime,NULL);
 		if(aptask.state != IDLE) {
-			nanosec = (SLACK[i%NUM_FRAMES])*1000000;
 			set_priority(&aptask, 97);
 			run_ap = 0;
-			exec_wait(&time, &utime, nanosec);
+			exec_wait(&time, &utime, (SLACK[i%NUM_FRAMES])*1000000);
 			set_priority(&aptask, 97 - NUM_P_TASKS);
 		}
 
-		if(skip) {
-			printf("ERROR! Frame overrun! Skipping this frame!\n");
-			skip = 0;
-		}
-		nanosec = H_PERIOD*10000000/NUM_FRAMES;
-		exec_wait(&time, &utime, nanosec);
+		exec_wait(&time, &utime, H_PERIOD*10000000/NUM_FRAMES);
 		printf("#########\n");
 	}
 	for(int i = 0; i < NUM_P_TASKS; i++) end_task(&tasks[i]);
@@ -106,8 +107,7 @@ void * executive(void * v) {
 }
 
 void ap_task_request() {
-	if(aptask.state == IDLE) run_ap = 1;
-	else printf("ERROR! AP task was released before its previous instance finished!\n");
+	run_ap = 1;
 }
 
 void * p_task_handler(void * a) {	//periodic task handler
@@ -115,12 +115,14 @@ void * p_task_handler(void * a) {	//periodic task handler
 	pthread_mutex_lock(&t->mutex);
 	while(1) {
 		pthread_cond_wait(&t->cond, &t->mutex);
-		t->state = RUNNING;
-		pthread_mutex_unlock(&t->mutex);
-		P_TASKS[t->id]();	//task's code
-		pthread_mutex_lock(&t->mutex);
-		if(t->id == 2) ap_task_request();
-		t->state = IDLE;
+		if(t->state != IDLE) {
+			t->state = RUNNING;
+			pthread_mutex_unlock(&t->mutex);
+			P_TASKS[t->id]();	//task's code
+			pthread_mutex_lock(&t->mutex);
+			if(t->id == 2) ap_task_request();
+			t->state = IDLE;
+		}
 	}
 }
 

@@ -109,7 +109,7 @@ void task0_code()	//WCET = 20
 void task1_code()	//WCET = 20
 {
 	printf("1\n");
-	busy_wait(19);
+	busy_wait(89);
 	return;
 }
 
